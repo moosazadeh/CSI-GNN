@@ -1,5 +1,5 @@
 # Code:
-This is the source code for paper: CSI-GNN: Combined Side Information-driven Graph Neural Networks for Session-based Recommendation Systems
+This is the source code for paper: ICB-HGNN: Item-Category-Brand based Heterogeneous Graph Neural Networks for Session-based Recommendation Systems
 
 # Usage
 **Data preprocessing:** from datasets folder
