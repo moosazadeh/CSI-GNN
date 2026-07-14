@@ -8,9 +8,9 @@ from torch.nn import Module, Parameter, Linear
 import torch.nn.functional as F
 
 # Combined Side Information-driven Graph Neural Networks
-class CSI_GNN(Module):      
+class ICB_HGNN(Module):      
     def __init__(self, opt, num_item, num_brnd, num_cat, num_total, brand, category):
-        super(CSI_GNN, self).__init__()
+        super(ICB_HGNN, self).__init__()
         self.opt = opt
         self.dataset = opt.dataset
         self.batch_size = opt.batch_size
@@ -69,28 +69,28 @@ class CSI_GNN(Module):
         for weight in self.parameters():
             weight.data.uniform_(-stdv, stdv)
 
-    def compute_scores(self, locl_itm_emb, local_brnd_based_itm_emb, local_cat_based_itm_emb,
+    def compute_scores(self, locl_itm_emb, locl_brnd_based_itm_emb, locl_cat_based_itm_emb,
                                                   locl_brnd_emb, locl_cat_emb, locl_brnd_itm_emb, locl_cat_itm_emb,
                                                                                   locl_itm_brnd_emb, locl_itm_cat_emb, mask):
-        ''' Compute predicted probability tensor (scores) of all items in dataset. '''
-        itm_emb = locl_itm_emb + local_brnd_based_itm_emb + local_cat_based_itm_emb + locl_brnd_itm_emb * self.a1 + locl_cat_itm_emb * self.a2
+        # Collaborative embedding
+        itm_emb = locl_itm_emb + locl_brnd_based_itm_emb + locl_cat_based_itm_emb + locl_brnd_itm_emb * self.a1 + locl_cat_itm_emb * self.a2
         brnd_emb = locl_brnd_emb + locl_itm_brnd_emb * self.a3
         cat_emb = locl_cat_emb + locl_itm_cat_emb * self.a4
-        coll_itm_emb = torch.cat([itm_emb, brnd_emb, cat_emb],-1)     # Collaborative item embedding
+        coll_itm_emb = torch.cat([itm_emb, brnd_emb, cat_emb],-1)     # Collaborative embedding
         
         mask = mask.float().unsqueeze(-1)
         batch_size = itm_emb.shape[0]
         len = itm_emb.shape[1]
         
         pos_emb = (self.pos_embedding.weight[:len]).unsqueeze(0).repeat(batch_size, 1, 1)   # Position embedding
-        z = torch.tanh(torch.matmul(torch.cat([pos_emb, coll_itm_emb], -1), self.w_1))
+        beta = torch.tanh(torch.matmul(torch.cat([pos_emb, coll_itm_emb], -1), self.w_1))
         
         # Collaborative session embedding
         coll_sess_emb = (torch.sum(coll_itm_emb * mask, -2) / torch.sum(mask, 1)).unsqueeze(-2).repeat(1, len, 1)
 
-        # Attention coefficients
-        beta = (torch.matmul(torch.sigmoid(self.glu1(z) + self.glu2(coll_sess_emb)), self.w_2))* mask
-        coll_att_sess_emb = torch.sum(beta * coll_itm_emb, 1)   # Collaborative attention-based session embedding
+        # Collaborative attentive session embedding
+        gamma = (torch.matmul(torch.sigmoid(self.glu1(beta) + self.glu2(coll_sess_emb)), self.w_2))* mask
+        coll_att_sess_emb = torch.sum(gamma * coll_itm_emb, 1)   
 
         # Concatenate the embedding of each item and its corresponding brand and category.
         all_itm_emb = self.embedding.weight[1: self.num_item]
