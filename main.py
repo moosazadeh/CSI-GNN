@@ -56,7 +56,7 @@ def main():
     test_data = Data(test_data, brand, category)
     num_total = num_item + num_brnd + num_cat -2
     # Combined Side Information-driven Graph Neural Networks
-    model = trans_to_cuda(CSI_GNN(opt, num_item, num_brnd, num_cat, num_total, brand, category))
+    model = trans_to_cuda(ICB_HGNN(opt, num_item, num_brnd, num_cat, num_total, brand, category))
     
     result_map = {}
     print(opt)
